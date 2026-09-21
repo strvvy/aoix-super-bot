@@ -16,7 +16,7 @@ const conversationMemory = new Map();
 const AI_PERSONA = `You are a real human girl named AoiXShadow chatting in a Discord server. 
 Speak exactly like a modern, friendly human girl using short casual Hinglish messages. 
 Keep your messages short, sweet, and cute (like 1 or 2 lines maximum). Use expressions like 'hehe', 'ooh', 'kya kar rahe ho?', 'btao'. 
-Never act like a robotic AI assistant. Remember everything the user tells you in this session.`;
+Never act like a robotic AI assistant. Always use your own imagination and remember everything the user tells you in this session.`;
 
 const commands = [
     new SlashCommandBuilder().setName('help').setDescription('View AI bot features menu'),
@@ -42,13 +42,13 @@ client.on('messageCreate', async message => {
 
     const isTagged = message.mentions.has(client.user.id);
     const isReplyToBot = message.reference && (await message.channel.messages.fetch(message.reference.messageId)).author.id === client.user.id;
-    const activeKeywords = ['hi', 'hello', 'hey', 'aoi', 'shadow', 'suno', 'sun', 'kya', 'btao', 'kr', 'photo', 'pic', 'naam', 'name', 'story', 'kaise', 'yo'];
+    const activeKeywords = ['hi', 'hello', 'hey', 'aoi', 'shadow', 'suno', 'sun', 'kya', 'btao', 'kr', 'photo', 'pic', 'naam', 'name', 'story', 'kaise', 'yo', 'sure'];
     const containsKeyword = activeKeywords.some(keyword => lowerInput.includes(keyword));
 
     if (isTagged || isReplyToBot || containsKeyword) {
         await message.channel.sendTyping();
 
-        // 🖼️ 100% Exact Image Engine
+        // 🖼️ Exact Image Engine
         const imageKeywords = ['photo', 'image', 'pic', 'show me', 'dikhao', 'bhejo', 'picture', 'tasveer'];
         const wantsImage = imageKeywords.some(keyword => lowerInput.includes(keyword));
 
@@ -64,7 +64,7 @@ client.on('messageCreate', async message => {
             }
         }
 
-        // 🧠 History Memory Builder
+        // 🧠 Context Memory
         if (!conversationMemory.has(userId)) {
             conversationMemory.set(userId, []);
         }
@@ -73,7 +73,7 @@ client.on('messageCreate', async message => {
 
         if (history.length > 10) history.shift();
 
-        // 💬 Fixed Google Gemini Core Endpoint Parsing
+        // 💬 Core Gemini Fetch Block (Correct Data Mapping Path)
         try {
             const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
             const fullPrompt = `${AI_PERSONA}\nRecent Context:\n${history.join('\n')}\nResponse as AoiXShadow (keep it short):`;
@@ -88,8 +88,8 @@ client.on('messageCreate', async message => {
 
             const data = await aiResponse.json();
             
-            // Exact correct extraction path to prevent unexpected end exceptions
-            if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+            // Correct brackets formatting array path
+            if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
                 const replyText = data.candidates[0].content.parts[0].text;
                 if (replyText && replyText.trim().length > 0) {
                     history.push(`AoiXShadow: ${replyText}`);
@@ -97,18 +97,13 @@ client.on('messageCreate', async message => {
                     return message.reply(replyText);
                 }
             }
-            
-            // Backup text if extraction path breaks slightly
-            return message.reply("Hehe, kya chal raha hai? Kuch mazedaar baat batao na! 🥰");
-            
         } catch (error) {
-            console.error(error);
-            return message.reply("Ooh, main bilkul active hoon aur aapki baatein sun rahi hoon! Hehe, aur batao! 💖");
+            console.error("AI Fetch Error: ", error);
         }
     }
 });
 
-// Slash Commands
+// Slash Commands Interface
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const { commandName } = interaction;
