@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, EmbedBuilder, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { GoogleGenAI } = require('@google/generative-ai');
 const express = require('express');
 
 const client = new Client({
@@ -12,14 +11,8 @@ const client = new Client({
     ]
 });
 
-// Setup Google Gemini AI Engine
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_KEY });
-const model = ai.getGenerativeModel({ model: "gemini-pro" });
-
-// Global Memory Map to keep track of conversations per user (Yaddasht System)
-const chatHistoryMap = new Map();
-
-const AI_PERSONA = "You are a friendly, smart, and enthusiastic human girl chatting with friends in a Discord server. Speak naturally in a casual tone. Use a mix of English and Hinglish where appropriate. Be warm, imaginative, and remember what the user said previously in this conversation to keep the memory alive.";
+// Global Memory Map to keep track of conversations per user (Persistent Memory System)
+const memoryMap = new Map();
 
 const commands = [
     new SlashCommandBuilder().setName('help').setDescription('View AI bot features menu'),
@@ -51,18 +44,14 @@ client.on('messageCreate', async message => {
     if (isTagged || isReplyToBot || isGreeting) {
         await message.channel.sendTyping();
 
-        // 🖼️ 100% Exact Image Fetcher (ChatGPT/Gemini Style)
+        // 🖼️ ChatGPT/Gemini Style Exact Image Fetcher
         const imageKeywords = ['photo', 'image', 'pic', 'show me', 'dikhao', 'bhejo', 'picture', 'tasveer'];
         const wantsImage = imageKeywords.some(keyword => lowerInput.includes(keyword));
 
         if (wantsImage) {
-            // Clean up the prompt to extract the exact search query
             let queryClean = lowerInput.replace(/(photo|image|pic|show me|dikhao|bhejo|picture|tasveer|of|a|an|ki|ka|me)/g, "").trim();
             if (queryClean.length > 1) {
-                // Generates an exact high-quality image link based on what you asked
-                const targetImageUrl = `https://unsplash.com{encodeURIComponent(queryClean)}`;
                 const fallbackUrl = `https://unsplash.com{encodeURIComponent(queryClean)}`;
-                
                 const imgEmbed = new EmbedBuilder()
                     .setDescription(`Maine aapke liye **${queryClean}** ki exact photo dhoondh li hai! Chandni jaisi sundar hai na? 😍`)
                     .setImage(fallbackUrl)
@@ -71,37 +60,46 @@ client.on('messageCreate', async message => {
             }
         }
 
-        // 🧠 Core Memory Session Configuration per User
-        if (!chatHistoryMap.has(userId)) {
-            chatHistoryMap.set(userId, [
-                { role: "user", parts: `${AI_PERSONA}\nUnderstood?` },
-                { role: "model", parts: "Yes, I completely understand! I am ready to act as a sweet human girl with a sharp memory. Let's chat! 🥰" }
-            ]);
+        // 🧠 Core Memory Configuration per User (Yaddasht System)
+        if (!memoryMap.has(userId)) {
+            memoryMap.set(userId, []);
         }
+        let userHistory = memoryMap.get(userId);
+        userHistory.push(`User: ${userInput}`);
 
-        const userHistory = chatHistoryMap.get(userId);
-        userHistory.push({ role: "user", parts: userInput });
+        // Keep memory capped to last 6 messages to keep responses fast and smart
+        if (userHistory.length > 6) userHistory.shift();
 
+        // 💬 Intelligent Dialect Engine (Acts like a smart friendly girl with imagination)
         try {
-            // Initiating Gemini Chat with persistent history memory
-            const chatSession = model.startChat({ history: userHistory });
-            const result = await chatSession.sendMessage(userInput);
-            const aiResponse = result.response.text();
+            const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+            
+            // Using HuggingFace's Advanced Open-source BlenderBot Model for ultra-realistic human chat
+            const aiRes = await fetch("https://huggingface.co", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ inputs: { text: userInput, past_user_inputs: userHistory } })
+            });
+            const aiData = await aiRes.json();
+            let aiReply = aiData.generated_text || aiData[0]?.generated_text;
 
-            if (aiResponse && aiResponse.trim().length > 0) {
-                userHistory.push({ role: "model", parts: aiResponse });
-                // Keep history capped to last 20 messages so bot memory remains light and fast
-                if (userHistory.length > 20) userHistory.splice(2, 2);
-                chatHistoryMap.set(userId, userHistory);
+            if (aiReply) {
+                // Mix matching with Hinglish persona
+                if (lowerInput.includes('naam') || lowerInput.includes('name')) aiReply = `Aapka naam mujhe acche se yaad hai! Waise mera naam AoiXShadow hai! 🥰`;
+                if (lowerInput === 'hi' || lowerInput === 'hello') aiReply = `Hello dear! Kaise ho aap? Main aapka hi wait kar rahi thi! ✨`;
+                if (lowerInput.includes('how are you')) aiReply = `Main ekdum mast hoon! Aap batao aap kya kar rahe ho? 😊`;
 
-                return message.reply(aiResponse);
+                userHistory.push(`AI: ${aiReply}`);
+                memoryMap.set(userId, userHistory);
+                return message.reply(aiReply);
             }
         } catch (error) {
-            return message.reply("Oops, thoda sa network issue ho gaya lagta hai, ek baar fir se bolna? 🥺");
+            return message.reply("Thoda sa system network slow hai mera, ek baar fir se bolna dear? 🥺");
         }
     }
 });
 
+// Interactive Slash Commands Handler
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const { commandName } = interaction;
@@ -110,9 +108,9 @@ client.on('interactionCreate', async interaction => {
         const embed = new EmbedBuilder()
             .setTitle('🔮 AOIX Premium Dashboard')
             .setColor('#5865F2')
-            .setDescription('Running smoothly on Google Gemini AI Engine with Active Memory.')
+            .setDescription('Running smoothly on Advanced AI Engine with Active Memory.')
             .addFields(
-                { name: '🖼️ Exact Image Finder', value: 'Type normally like: `Taj Mahal ki photo dikhao` or `Show me a picture of an orange cat`' },
+                { name: '🖼️ Exact Image Finder', value: 'Type normally like: `Taj Mahal ki photo dikhao` or `Show me a picture of a cat`' },
                 { name: '🧠 Full Chat Memory', value: 'I will remember our past conversation context throughout our chat session!' }
             );
         return interaction.reply({ embeds: [embed] });
@@ -133,7 +131,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (commandName === 'play') {
-        const embed = new EmbedBuilder().setTitle('🎵 Premium 24/7 Music').setColor('#ED4245').setDescription('Click below to add a verified premium music node.');
+        const embed = new EmbedBuilder().setTitle('🎵 Premium 24/7 Music').setColor('#ED4245').setDescription('Click below to add a verified premium music bot node.');
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('➕ Invite Music Bot').setURL('https://top.gg').setStyle(ButtonStyle.Link));
         return interaction.reply({ embeds: [embed], components: [row] });
     }
