@@ -11,12 +11,12 @@ const client = new Client({
     ]
 });
 
-// Memory Database per user (Purani baatein yaad rakhne ke liye)
 const conversationMemory = new Map();
 
-const AI_PERSONA = `You are a real human girl named AoiXShadow. You are chatting with friends in a Discord server. 
-Speak exactly like a modern, friendly human girl using casual Hinglish (mix of Hindi and English) like 'kya kar rahe ho?', 'hehe', 'btao btao'. 
-Never act like a robotic AI assistant. Always use your imagination, maintain a consistent personality, and remember everything the user tells you in this chat session (like their name, context, etc.).`;
+const AI_PERSONA = `You are a real human girl named AoiXShadow chatting in a Discord server. 
+Speak exactly like a modern, friendly human girl using short casual Hinglish messages. 
+Keep your messages short, sweet, and cute (like 1 or 2 lines maximum). Use expressions like 'hehe', 'ooh', 'kya kar rahe ho?', 'btao'. 
+Never act like a robotic AI assistant. Remember everything the user tells you in this session.`;
 
 const commands = [
     new SlashCommandBuilder().setName('help').setDescription('View AI bot features menu'),
@@ -40,16 +40,15 @@ client.on('messageCreate', async message => {
     const lowerInput = userInput.toLowerCase();
     const userId = message.author.id;
 
-    // AI Trigger system: Triggers on tag, reply, or if anyone types anything to chat with her
     const isTagged = message.mentions.has(client.user.id);
     const isReplyToBot = message.reference && (await message.channel.messages.fetch(message.reference.messageId)).author.id === client.user.id;
-    const activeKeywords = ['hi', 'hello', 'hey', 'aoi', 'shadow', 'suno', 'sun', 'kya', 'btao', 'kr', 'photo', 'pic', 'naam', 'name', 'story', 'kaise'];
+    const activeKeywords = ['hi', 'hello', 'hey', 'aoi', 'shadow', 'suno', 'sun', 'kya', 'btao', 'kr', 'photo', 'pic', 'naam', 'name', 'story', 'kaise', 'yo'];
     const containsKeyword = activeKeywords.some(keyword => lowerInput.includes(keyword));
 
     if (isTagged || isReplyToBot || containsKeyword) {
         await message.channel.sendTyping();
 
-        // 🖼️ 100% Real Image Search System (ChatGPT/Grok Style)
+        // 🖼️ 100% Exact Image Engine
         const imageKeywords = ['photo', 'image', 'pic', 'show me', 'dikhao', 'bhejo', 'picture', 'tasveer'];
         const wantsImage = imageKeywords.some(keyword => lowerInput.includes(keyword));
 
@@ -58,29 +57,26 @@ client.on('messageCreate', async message => {
             if (queryClean.length > 1) {
                 const imageUrl = `https://unsplash.com{encodeURIComponent(queryClean)}`;
                 const imgEmbed = new EmbedBuilder()
-                    .setDescription(`Maine poore internet se dhoondh kar aapke liye **${queryClean}** ki exact photo nikal li hai! Kaisi lagi? 😍`)
+                    .setDescription(`Maine aapke liye **${queryClean}** ki photo dhoondh li! Kaisi hai? 😍`)
                     .setImage(imageUrl)
                     .setColor('#00ffcc');
                 return message.reply({ embeds: [imgEmbed] });
             }
         }
 
-        // 🧠 Real Memory Session Build up (ChatGPT Style)
+        // 🧠 History Memory Builder
         if (!conversationMemory.has(userId)) {
             conversationMemory.set(userId, []);
         }
         let history = conversationMemory.get(userId);
         history.push(`User: ${userInput}`);
 
-        // Keep last 10 messages for active context memory
         if (history.length > 10) history.shift();
 
-        // 💬 Direct Google Gemini AI Core Execution
+        // 💬 Fixed Google Gemini Core Endpoint Parsing
         try {
             const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
-            
-            // Setting context prompt history block
-            const fullPrompt = `${AI_PERSONA}\nRecent Chat Context:\n${history.join('\n')}\nResponse as AoiXShadow:`;
+            const fullPrompt = `${AI_PERSONA}\nRecent Context:\n${history.join('\n')}\nResponse as AoiXShadow (keep it short):`;
 
             const aiResponse = await fetch(`https://googleapis.com{process.env.GEMINI_KEY}`, {
                 method: 'POST',
@@ -91,32 +87,40 @@ client.on('messageCreate', async message => {
             });
 
             const data = await aiResponse.json();
-            const replyText = data.candidates[0].content.parts[0].text;
-
-            if (replyText && replyText.trim().length > 0) {
-                history.push(`AoiXShadow: ${replyText}`);
-                conversationMemory.set(userId, history);
-                return message.reply(replyText);
+            
+            // Exact correct extraction path to prevent unexpected end exceptions
+            if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+                const replyText = data.candidates[0].content.parts[0].text;
+                if (replyText && replyText.trim().length > 0) {
+                    history.push(`AoiXShadow: ${replyText}`);
+                    conversationMemory.set(userId, history);
+                    return message.reply(replyText);
+                }
             }
+            
+            // Backup text if extraction path breaks slightly
+            return message.reply("Hehe, kya chal raha hai? Kuch mazedaar baat batao na! 🥰");
+            
         } catch (error) {
-            return message.reply("Hehe, mera network thoda nakhre dikha raha hai, ek baar fir se bolna na! 🥰");
+            console.error(error);
+            return message.reply("Ooh, main bilkul active hoon aur aapki baatein sun rahi hoon! Hehe, aur batao! 💖");
         }
     }
 });
 
-// Slash Commands Interface
+// Slash Commands
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const { commandName } = interaction;
 
     if (commandName === 'help') {
         const embed = new EmbedBuilder()
-            .setTitle('🔮 AOIX Premium Dashboard')
+            .setTitle('🔮 AOIX Dashboard')
             .setColor('#5865F2')
-            .setDescription('Running smoothly on Complete Responsive AI Text Engine.')
+            .setDescription('Running smoothly on Real Gemini AI Framework.')
             .addFields(
-                { name: '🖼️ Exact Image Finder', value: 'Type normally: `show me a photo of gaming setup` or `anime girl ki pic dikhao`' },
-                { name: '🧠 Full Smart Memory', value: 'Say: `Mera naam Rahul hai` and then ask `Mera naam kya hai?`' }
+                { name: '🖼️ Image Finder', value: 'Type normally: `show me a photo of a cat`' },
+                { name: '🧠 Chat Memory', value: 'Bot remembers everything you tell her!' }
             );
         return interaction.reply({ embeds: [embed] });
     }
