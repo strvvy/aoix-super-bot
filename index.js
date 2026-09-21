@@ -11,18 +11,22 @@ const client = new Client({
     ]
 });
 
-// Dynamic Local Memory Database (Keeps user context names alive)
-const userMemory = new Map();
+// Memory Database per user (Purani baatein yaad rakhne ke liye)
+const conversationMemory = new Map();
+
+const AI_PERSONA = `You are a real human girl named AoiXShadow. You are chatting with friends in a Discord server. 
+Speak exactly like a modern, friendly human girl using casual Hinglish (mix of Hindi and English) like 'kya kar rahe ho?', 'hehe', 'btao btao'. 
+Never act like a robotic AI assistant. Always use your imagination, maintain a consistent personality, and remember everything the user tells you in this chat session (like their name, context, etc.).`;
 
 const commands = [
-    new SlashCommandBuilder().setName('help').setDescription('View AOIX advanced features menu'),
+    new SlashCommandBuilder().setName('help').setDescription('View AI bot features menu'),
     new SlashCommandBuilder().setName('meme').setDescription('Get a random trending image meme'),
     new SlashCommandBuilder().setName('play').setDescription('Get premium music bot connection node'),
     new SlashCommandBuilder().setName('ping').setDescription('Check bot network latency')
 ].map(cmd => cmd.toJSON());
 
 client.once('ready', async () => {
-    console.log(`${client.user.tag} Smart Core AI Online.`);
+    console.log(`${client.user.tag} Ultimate Real AI Online.`);
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
         await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
@@ -36,18 +40,16 @@ client.on('messageCreate', async message => {
     const lowerInput = userInput.toLowerCase();
     const userId = message.author.id;
 
-    // AI Trigger system: Trigger on tags, replies, or any message in chat channels to keep it highly active!
+    // AI Trigger system: Triggers on tag, reply, or if anyone types anything to chat with her
     const isTagged = message.mentions.has(client.user.id);
     const isReplyToBot = message.reference && (await message.channel.messages.fetch(message.reference.messageId)).author.id === client.user.id;
-    
-    // Highly responsive triggers: triggers if active chat keywords exist anywhere in the message text
-    const activeKeywords = ['hi', 'hello', 'hey', 'aoi', 'shadow', 'suno', 'sun', 'kya', 'btao', 'kr', 'photo', 'pic', 'naam', 'name', 'story'];
+    const activeKeywords = ['hi', 'hello', 'hey', 'aoi', 'shadow', 'suno', 'sun', 'kya', 'btao', 'kr', 'photo', 'pic', 'naam', 'name', 'story', 'kaise'];
     const containsKeyword = activeKeywords.some(keyword => lowerInput.includes(keyword));
 
-    if (isTagged || isReplyToBot || containsKeyword || message.channel.name.includes('chat')) {
+    if (isTagged || isReplyToBot || containsKeyword) {
         await message.channel.sendTyping();
 
-        // 🖼️ Feature 1: ChatGPT/Grok Style 100% Exact Image Engine
+        // 🖼️ 100% Real Image Search System (ChatGPT/Grok Style)
         const imageKeywords = ['photo', 'image', 'pic', 'show me', 'dikhao', 'bhejo', 'picture', 'tasveer'];
         const wantsImage = imageKeywords.some(keyword => lowerInput.includes(keyword));
 
@@ -63,53 +65,41 @@ client.on('messageCreate', async message => {
             }
         }
 
-        // 🧠 Feature 2: Persistent User Identity Memory System
-        if (lowerInput.includes('mera naam') && (lowerInput.includes('hai') || lowerInput.includes('is'))) {
-            let parts = userInput.split(/hai|is/i);
-            let nameExtract = parts[0].replace(/(mera|naam)/gi, "").trim();
-            if (!nameExtract && parts[1]) nameExtract = parts[1].trim();
-            
-            if (nameExtract.length > 1) {
-                userMemory.set(userId, nameExtract);
-                return message.reply(`Aww, bahut pyaara naam hai aapka, **${nameExtract}**! Maine apne dimaag mein hamesha ke liye save kar liya hai! 🥰`);
-            }
+        // 🧠 Real Memory Session Build up (ChatGPT Style)
+        if (!conversationMemory.has(userId)) {
+            conversationMemory.set(userId, []);
         }
+        let history = conversationMemory.get(userId);
+        history.push(`User: ${userInput}`);
 
-        if (lowerInput.includes('naam kya') || lowerInput.includes('name kya') || lowerInput.includes('mera naam yaad')) {
-            const savedName = userMemory.get(userId);
-            if (savedName) {
-                return message.reply(`Mujhe sab yaad rehta hai dear! Aapka naam **${savedName}** hai! Kaise bhool sakti hoon? 😉`);
-            } else {
-                return message.reply("Aapne mujhe abhi tak apna naam bataya hi nahi! Batao na, aapka naam kya hai? 😊");
-            }
-        }
+        // Keep last 10 messages for active context memory
+        if (history.length > 10) history.shift();
 
-        // 💬 Feature 3: Full Imagination Interactive Dialogue Framework (Real Aoi Persona)
+        // 💬 Direct Google Gemini AI Core Execution
         try {
             const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
             
-            // Calling a hyper-fast serverless AI endpoint directly without heavy local libraries to avoid timeouts
-            const aiRaw = await fetch(`https://dictionaryapi.dev`);
-            
-            // Smart response router for comprehensive sentences
-            if (lowerInput.includes('kya kar') || lowerInput.includes('kya kr')) {
-                return message.reply("Bas abhi aap sabhi gaming legends se baatein kar rahi hoon! Aap batao, kya chal raha hai server par? 🥳");
-            }
-            if (lowerInput.includes('hi') || lowerInput.includes('hello') || lowerInput.includes('hey')) {
-                return message.reply("Hello dear! Kaise ho aap? Main chat par aapka hi toh wait kar rahi thi! ✨");
-            }
-            if (lowerInput.includes('how are you') || lowerInput.includes('kaise ho')) {
-                return message.reply("Main ekdum mast, super happy aur active hoon! Aap batao, aapka din kaisa chal raha hai? 😊");
-            }
-            if (lowerInput.includes('story') || lowerInput.includes('kahani')) {
-                return message.reply("Ek baar ek pyara sa bot tha jo server par chat active rakhta tha... aur wo main hoon! Hehe, pasand aayi kahani? 😂📖");
-            }
+            // Setting context prompt history block
+            const fullPrompt = `${AI_PERSONA}\nRecent Chat Context:\n${history.join('\n')}\nResponse as AoiXShadow:`;
 
-            // Global conversational fallback router
-            return message.reply("Aapki baatein sunkar mujhe bohot maza aa raha hai! Chalo chat ko aur active rakhte hain, kuch aur mazedaar poocho! 💖");
-            
+            const aiResponse = await fetch(`https://googleapis.com{process.env.GEMINI_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: fullPrompt }] }]
+                })
+            });
+
+            const data = await aiResponse.json();
+            const replyText = data.candidates[0].content.parts[0].text;
+
+            if (replyText && replyText.trim().length > 0) {
+                history.push(`AoiXShadow: ${replyText}`);
+                conversationMemory.set(userId, history);
+                return message.reply(replyText);
+            }
         } catch (error) {
-            return message.reply("Hehe, main bilkul active hoon aur aapki saari baatein deeply sun rahi hoon! Kuch aur batao na! 🥰");
+            return message.reply("Hehe, mera network thoda nakhre dikha raha hai, ek baar fir se bolna na! 🥰");
         }
     }
 });
